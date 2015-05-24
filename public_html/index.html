@@ -1,0 +1,207 @@
+<!doctype html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+</head>
+<style>
+    text {
+        font: 20px "Helvetica Neue", Arial;
+    }
+</style>
+<body>
+
+    <div class="main-container">
+        <div class="main wrapper clearfix">
+
+
+            <script type="text/javascript">
+
+                var scale = 200;
+                var max_val = 2.5;
+                var canvas;
+
+                //get the data from file
+                d3.json("2b-data.json", function (data) {
+//                                console.log(data);  //Log output to console
+                    dataset = data;
+
+                    //define margin around the graph
+                    var margin = {top: 50, right: 30, bottom: 200, left: 100},
+                    width = 800 - margin.left - margin.right,
+                            height = max_val * scale;
+
+
+                    //define the x-axis
+                    var x = d3.scale.ordinal()
+                            .rangeRoundBands([0, width - margin.right - margin.left], 0);
+                    x.domain(data.category0.map(function (d) {
+                        return d.date;
+                    }));
+                    var xAxis = d3.svg.axis()
+                            .scale(x)
+                            .orient("bottom");
+                    x.domain(data.category0.map(function (d) {
+                        return d.date;
+                    }));
+
+
+                    //define the y-axis
+                    var y = d3.scale.linear()
+                            .domain([0, max_val])
+                            .range([max_val * scale, 0]);
+                    var yAxis = d3.svg.axis()
+                            .scale(y)
+                            .tickSize(5)
+                            .orient("left");
+
+
+                    //create the svg
+                    canvas = d3.select("body").append("svg")
+                            .attr("class", "chart");
+
+                    //add margins to the svg        
+                    canvas = d3.select(".chart").attr("width", width + margin.left + margin.right)
+                            .attr("height", height + margin.top + margin.bottom)
+                            .append("g")
+                            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                    //add text to the x-axis, with a small rotation
+                    canvas.append("g")
+                            .attr("class", "x axis")
+                            .attr("transform", "translate(0," + height + ")")
+                            .call(xAxis).selectAll("text")
+                            .style("text-anchor", "end")
+                            .attr("dx", "-.5em")
+                            .attr("dy", ".1em")
+                            .attr("transform", function (d) {
+                                return "rotate(-65)";
+                            });
+
+                    canvas.append("g")
+                            .attr("class", "y axis")
+                            .call(yAxis);
+
+                    //used to display text for the rect in focus
+                    var focus = canvas.append("g")
+                            .attr("class", "focus");
+                    focus.append("text")
+                            .attr("x", width - 400)
+                            .attr("y", 50)
+                            .attr("dy", ".35em")
+                            .style("font-size", "40px");
+
+                    //draw rect for category1 and add mouseover function
+                    canvas.selectAll("rect1")
+                            .data(data.category1)
+                            .enter()
+                            .append("rect")
+                            .attr("class", "rect1")
+                            .attr("height", function (d) {
+                                return (d.value) * scale;
+                            })
+                            .attr("width", 40)
+                            .attr("x", function (d, i) {
+                                return i * (width - margin.left - margin.right) / data.category1.length;
+                            })
+                            .attr("y", function (d) {
+                                return height - d.value * scale;
+                            })
+                            .attr("fill", "blue")
+                            .on("mouseover", function () {
+                                focus.style("display", null);//clear previous data
+                            })
+                            .on("mouseout", function () {
+                                focus.style("display", "none");//no longer in focus
+                            })
+                            .on('mousemove', function (d) {
+                                mousemove(d);
+                            });
+
+                    //draw rect for category0 and add mouseover function
+                    canvas.selectAll("rect2")
+                            .data(data.category0)
+                            .enter()
+                            .append("rect")
+                            .attr("height", function (d) {
+                                return (d.value) * scale;
+                            })
+                            .attr("width", 40)
+                            .attr("x", function (d, i) {
+                                return i * (width - margin.left - margin.right) / data.category1.length;
+                            })
+                            .attr("y", function (d, i) {
+                                return -canvas.selectAll(".rect1")[0][i].attributes.height.value + height - d.value * scale;
+                            })
+                            .attr("fill", "red")
+                            .on("mouseover", function () {
+                                focus.style("display", null); //clear previous data
+                            })
+                            .on("mouseout", function () {
+                                focus.style("display", "none");//no longer in focus
+                            })
+                            .on('mousemove', function (d) {
+                                mousemove(d);
+                            });
+
+                    //create a text with the value from d
+                    function mousemove(d) {
+                        focus.select("text")
+                                .text(function () {
+                                    return d.value;
+                                });
+                    }
+
+                    /* 
+                     * create the legend
+                     */
+                    var color = ["blue", "red"];
+                    var legend = canvas.append("g")
+                            .attr("class", "legend")
+                            .attr("x", width - 65)
+                            .attr("y", 25)
+                            .attr("height", 100)
+                            .attr("width", 100);
+                    //create the colored squares
+                    legend.selectAll('rect')
+                            .data(d3.keys(dataset))
+                            .enter()
+                            .append("rect")
+                            .attr("x", width - 245)
+                            .attr("y", function (d, i) {
+                                return i * 30;
+                            })
+                            .attr("width", 20)
+                            .attr("height", 20)
+                            .style("fill", function (d, i) {
+
+                                return color[i];
+                            });
+                    //create the legend text
+                    legend.selectAll('text')
+                            .data(d3.keys(dataset))
+                            .enter()
+                            .append("text")
+                            .attr("font-family", "serif")
+                            .attr("font-weight", "bold")
+                            .attr("x", width - 220)
+                            .attr("y", function (d, i) {
+                                return i * 30 + 15;
+                            })
+                            .text(function (d) {
+                                var text = d;
+                                return text;
+                            });
+
+                });
+
+
+            </script>
+        </div>
+    </div>
+</body>
+</html>
